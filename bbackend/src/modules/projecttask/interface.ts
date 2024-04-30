@@ -5,6 +5,7 @@ export type TProject = {
   description: string
   tasks?: [Types.ObjectId]
   recentActivities?: [string]
+  teamMembers?: [string]
 }
 
 export type TProjectTask = {

@@ -13,6 +13,18 @@ const createProject = catchAsync(async (req, res) => {
     data: project,
   })
 })
+const addTeamMembers = catchAsync(async (req, res) => {
+  const project = await projectService.addTeamMembersToProject(
+    req.params.id,
+    req.body.teamMembers,
+  )
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: 'Members added successfully',
+    data: project,
+  })
+})
 
 const getAllProjects = catchAsync(async (req, res) => {
   const projects = await projectService.getAllProjectsFromDB()
@@ -108,6 +120,41 @@ const deleteAssignedMembersFromTask = catchAsync(async (req, res) => {
   })
 })
 
+const addRecentActivity = catchAsync(async (req, res) => {
+  const project = await projectService.addRecentActivityInDB(
+    req.params.id,
+    req.body,
+  )
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: 'Recent activity added successfully',
+    data: project,
+  })
+})
+const removeRecentActivity = catchAsync(async (req, res) => {
+  const project = await projectService.removeRecentActivityFromDB(
+    req.params.id,
+    req.body,
+  )
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: 'Recent activity removed successfully',
+    data: project,
+  })
+})
+
+const searchTask = catchAsync(async (req, res) => {
+  const tasks = await projectService.searchTasks(req.query)
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: 'Tasks fetched successfully',
+    data: tasks,
+  })
+})
+
 export const projectController = {
   createProject,
   getProject,
@@ -118,4 +165,8 @@ export const projectController = {
   deleteTaskFromProject,
   assignedMembersToTask,
   deleteAssignedMembersFromTask,
+  addRecentActivity,
+  addTeamMembers,
+  removeRecentActivity,
+  searchTask,
 }

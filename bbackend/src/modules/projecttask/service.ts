@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { TProject, TProjectTask } from './interface'
 import { Project, Task } from './model'
@@ -12,6 +13,15 @@ const getAllProjectsFromDB = async () => {
     'name description status team recentActivities assignedMembers',
   )
   return projects
+}
+
+const addTeamMembersToProject = async (projectId: string, member: string) => {
+  const project = await Project.findByIdAndUpdate(
+    projectId,
+    { $push: { teamMembers: member } },
+    { new: true },
+  )
+  return project
 }
 
 const getProjectFromDB = async (id: string) => {
@@ -79,8 +89,36 @@ const deleteAssignedMembersFromTask = async (
   return task
 }
 
+const addRecentActivityInDB = async (projectId: string, activity: string) => {
+  const project = await Project.findByIdAndUpdate(
+    projectId,
+    { $push: { recentActivities: activity } },
+    { new: true },
+  )
+  return project
+}
+
+const removeRecentActivityFromDB = async (
+  projectId: string,
+  activity: string,
+) => {
+  const project = await Project.findByIdAndUpdate(
+    projectId,
+    { $pull: { recentActivities: activity } },
+    { new: true },
+  )
+  return project
+}
+//query to  filter tasks by status, due date, or assignee.
+
+const searchTasks = async (query: any) => {
+  const tasks = await Task.find(query).populate('assignedMembers', 'name email')
+  return tasks
+}
+
 export const projectService = {
   createProjectIntoDB,
+  addTeamMembersToProject,
   getAllProjectsFromDB,
   getProjectFromDB,
   editProjectInDB,
@@ -89,4 +127,7 @@ export const projectService = {
   deleteTaskFromProjectInDB,
   assignedMembersToTask,
   deleteAssignedMembersFromTask,
+  addRecentActivityInDB,
+  removeRecentActivityFromDB,
+  searchTasks,
 }

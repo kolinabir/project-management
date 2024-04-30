@@ -20,6 +20,7 @@ const projectSchema = new Schema<TProject>({
   description: { type: String, required: true },
   tasks: [{ type: Schema.Types.ObjectId, ref: 'Task' }],
   recentActivities: { type: [String] },
+  teamMembers: { type: [String] },
 })
 
 export const Project = model<TProject>('Project', projectSchema)
