@@ -8,9 +8,11 @@ import {
   UserAddOutlined,
 } from "@ant-design/icons";
 import { useProjectStore } from "@/lib/store";
+import Link from "next/link";
 
 const ViewAllProject = () => {
   const projects = useProjectStore((state) => state.projects);
+  
   const addProject = useProjectStore((state) => state.addProject);
   const editProject = useProjectStore((state) => state.updateProject);
   const deleteProject = useProjectStore((state) => state.removeProject);
@@ -97,12 +99,13 @@ const ViewAllProject = () => {
       dataIndex: "teamMembers",
       key: "teamMembers",
       render: (teamMembers, record) => (
-        <div>
+        <div className="flex flex-wrap items-center gap-2">
           {teamMembers?.map((member) => (
             <Tag
               closable
               onClose={() => removeMember(record._id, member)}
               key={member}
+              className="bg-blue-500 text-white"
             >
               {member}
             </Tag>
@@ -110,6 +113,7 @@ const ViewAllProject = () => {
           <Input
             placeholder="Add a member"
             onPressEnter={(e) => addMember(record._id, e.target.value)}
+            className="w-full sm:w-auto"
           />
         </div>
       ),
@@ -118,18 +122,22 @@ const ViewAllProject = () => {
       title: "Action",
       key: "action",
       render: (_, record) => (
-        <Space size="middle">
-          <Button
-            type="primary"
-            icon={<EyeOutlined />}
-            className="bg-blue-500 hover:bg-blue-600 text-white"
-          >
-            View
-          </Button>
+        <Space size="middle" className="flex flex-col sm:flex-row">
+          <div>
+            <Link className="" href={`/dashboard/projectmanage/${record._id}`}>
+              <Button
+                type="primary"
+                icon={<EyeOutlined />}
+                className="bg-blue-500 hover:bg-blue-600 text-white mb-2 sm:mb-0"
+              >
+                View
+              </Button>
+            </Link>
+          </div>
           <Button
             type="default"
             icon={<EditOutlined />}
-            className="hover:bg-gray-200"
+            className="hover:bg-gray-200 mb-2 sm:mb-0"
             onClick={() => {
               showEditModal();
               form.setFieldsValue(record); // Populate form fields with project data
@@ -151,8 +159,8 @@ const ViewAllProject = () => {
   ];
 
   return (
-    <div className="p-8">
-      <div className="">
+    <div className="p-4 sm:p-8">
+      <div className="mb-4">
         <Button
           type="primary"
           onClick={showAddModal}
@@ -167,6 +175,7 @@ const ViewAllProject = () => {
         rowKey="_id"
         bordered
         className="ant-table-bordered"
+        scroll={{ x: true }}
       />
       {/* Add Project Modal */}
       <Modal

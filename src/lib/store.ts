@@ -23,8 +23,18 @@ export const useProjectStore = create((set) => ({
   projects: [],
   addProject: (project: TProject) =>
     set((state: { projects: Array<TProject> }) => ({
-      projects: [...state.projects, project],
+      //add custom id which is unique
+      projects: [...state.projects, { ...project, _id: Date.now().toString() }],
     })),
+  getState: () => {
+    return useProjectStore.getState();
+  },
+  getProjectById: (projectId: string) => {
+    const projectStore = useProjectStore.getState() as {
+      projects: Array<TProject>;
+    };
+    return projectStore.projects.find((project) => project._id === projectId);
+  },
   addMemberToProject: (projectId: string, member: string) =>
     set((state: { projects: Array<TProject> }) => ({
       projects: state.projects.map((project) =>
@@ -94,6 +104,23 @@ export const useProjectStore = create((set) => ({
               ...project,
               tasks: (project.tasks || []).map((task) =>
                 task._id === taskId ? updatedTask : task
+              ),
+            }
+          : project
+      ),
+    })),
+  changeTaskStatus: (
+    projectId: string,
+    taskId: string,
+    newStatus: "To Do" | "In Progress" | "Done"
+  ) =>
+    set((state: { projects: Array<TProject> }) => ({
+      projects: state.projects.map((project) =>
+        project._id === projectId
+          ? {
+              ...project,
+              tasks: (project.tasks || []).map((task) =>
+                task._id === taskId ? { ...task, status: newStatus } : task
               ),
             }
           : project
