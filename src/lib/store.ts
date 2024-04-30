@@ -1,65 +1,98 @@
 import { create } from "zustand";
+import { getProjects } from "./api";
 
 export type TProject = {
+  _id: string; // Assuming you have an ID field for projects
   name: string;
   description: string;
-  tasks?: [TProjectTask];
-  recentActivities?: [string];
-  teamMembers?: [string];
+  tasks?: Array<TProjectTask>;
+  recentActivities?: Array<string>;
+  teamMembers?: Array<string>;
 };
 
 export type TProjectTask = {
+  _id: string; // Assuming you have an ID field for tasks
   name: string;
   description: string;
   deadline: Date;
-  assignedMembers?: [string];
+  assignedMembers?: Array<string>;
   status?: "To Do" | "In Progress" | "Done";
 };
 
 export const useProjectStore = create((set) => ({
   projects: [],
-  setProjects: (projects: TProject) => set({ projects }),
   addProject: (project: TProject) =>
-    set((state: any) => ({ projects: [...state.projects, project] })),
-  removeProject: (projectId: string) =>
-    set((state: any) => ({
-      projects: state.projects.filter(
-        (project: any) => project._id !== projectId
-      ),
+    set((state: { projects: Array<TProject> }) => ({
+      projects: [...state.projects, project],
     })),
-  updateProject: (projectId: any, updatedProject: any) =>
-    set((state: any) => ({
-      projects: state.projects.map((project: any) =>
-        project._id === projectId ? updatedProject : project
-      ),
-    })),
-  addTaskToProject: (projectId: any, task: TProjectTask) =>
-    set((state: any) => ({
-      projects: state.projects.map((project: any) =>
-        project._id === projectId
-          ? { ...project, tasks: [...project.tasks, task] }
-          : project
-      ),
-    })),
-  removeTaskFromProject: (projectId: any, taskId: any) =>
-    set((state: any) => ({
-      projects: state.projects.map((project: any) =>
+  addMemberToProject: (projectId: string, member: string) =>
+    set((state: { projects: Array<TProject> }) => ({
+      projects: state.projects.map((project) =>
         project._id === projectId
           ? {
               ...project,
-              tasks: project.tasks.filter((task: any) => task._id !== taskId),
+              teamMembers: [...(project.teamMembers || []), member],
             }
           : project
       ),
     })),
 
-  editTaskFromProject: (projectId: any, taskId: any, updatedTask: any) =>
-    set((state: any) => ({
-      projects: state.projects.map((project: any) =>
+  removeMemberFromProject: (projectId: string, member: string) =>
+    set((state: { projects: Array<TProject> }) => ({
+      projects: state.projects.map((project) =>
         project._id === projectId
           ? {
               ...project,
-              tasks: project.tasks.map((task: any) =>
+              teamMembers: (project.teamMembers || []).filter(
+                (teamMember) => teamMember !== member
+              ),
+            }
+          : project
+      ),
+    })),
+  removeProject: (projectId: string) =>
+    set((state: { projects: Array<TProject> }) => ({
+      projects: state.projects.filter((project) => project._id !== projectId),
+    })),
+  updateProject: (projectId: string, updatedProject: TProject) =>
+    set((state: { projects: Array<TProject> }) => ({
+      projects: state.projects.map((project) =>
+        project._id === projectId ? updatedProject : project
+      ),
+    })),
+  addTaskToProject: (projectId: string, task: TProjectTask) =>
+    set((state: { projects: Array<TProject> }) => ({
+      projects: state.projects.map((project) =>
+        project._id === projectId
+          ? { ...project, tasks: [...(project.tasks || []), task] }
+          : project
+      ),
+    })),
+  removeTaskFromProject: (projectId: string, taskId: string) =>
+    set((state: { projects: Array<TProject> }) => ({
+      projects: state.projects.map((project) =>
+        project._id === projectId
+          ? {
+              ...project,
+              tasks: (project.tasks || []).filter(
+                (task) => task._id !== taskId
+              ),
+            }
+          : project
+      ),
+    })),
+
+  editTaskFromProject: (
+    projectId: string,
+    taskId: string,
+    updatedTask: TProjectTask
+  ) =>
+    set((state: { projects: Array<TProject> }) => ({
+      projects: state.projects.map((project) =>
+        project._id === projectId
+          ? {
+              ...project,
+              tasks: (project.tasks || []).map((task) =>
                 task._id === taskId ? updatedTask : task
               ),
             }
@@ -67,3 +100,18 @@ export const useProjectStore = create((set) => ({
       ),
     })),
 }));
+
+// Initialize the store with projects fetched from the API
+getProjects()
+  .then((projects) => {
+    // Ensure that projects is an array before setting it in the store
+    if (Array.isArray(projects)) {
+      useProjectStore.setState({ projects });
+    } else {
+      // Handle the case where projects is not an array
+      console.error("Projects data is not in the expected format:", projects);
+    }
+  })
+  .catch((error) => {
+    console.error("Error fetching projects:", error);
+  });

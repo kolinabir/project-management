@@ -1,32 +1,86 @@
 "use client";
-import React, { useState, useEffect } from "react";
-import { Table, Button, Space, Spin, Modal, Form, Input } from "antd";
-import { EditOutlined, DeleteOutlined, EyeOutlined } from "@ant-design/icons";
+import React, { useState } from "react";
+import { Table, Button, Space, Modal, Form, Input, Tag } from "antd";
+import {
+  EditOutlined,
+  DeleteOutlined,
+  EyeOutlined,
+  UserAddOutlined,
+} from "@ant-design/icons";
 import { useProjectStore } from "@/lib/store";
 
 const ViewAllProject = () => {
-  const [projects, setProjects] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const projects = useProjectStore((state) => state.projects);
+  const addProject = useProjectStore((state) => state.addProject);
+  const editProject = useProjectStore((state) => state.updateProject);
+  const deleteProject = useProjectStore((state) => state.removeProject);
+  const addMemberToProject = useProjectStore(
+    (state) => state.addMemberToProject
+  );
+  const removeMemberFromProject = useProjectStore(
+    (state) => state.removeMemberFromProject
+  );
 
-  const project = useProjectStore((state: any) => state.projects);
-  const [isModalVisible, setIsModalVisible] = useState(false);
+  const [isAddModalVisible, setIsAddModalVisible] = useState(false);
+  const [isEditModalVisible, setIsEditModalVisible] = useState(false);
+  const [isEditTeamMembersModalVisible, setIsEditTeamMembersModalVisible] =
+    useState(false);
+
   const [form] = Form.useForm();
 
-  const showModal = () => {
-    setIsModalVisible(true);
+  const showAddModal = () => {
+    setIsAddModalVisible(true);
+  };
+
+  const showEditModal = () => {
+    setIsEditModalVisible(true);
+  };
+
+  const showEditTeamMembersModal = () => {
+    setIsEditTeamMembersModalVisible(true);
   };
 
   const handleCancel = () => {
-    setIsModalVisible(false);
+    setIsAddModalVisible(false);
+    setIsEditModalVisible(false);
+    setIsEditTeamMembersModalVisible(false);
     form.resetFields();
   };
 
-  const onFinish = (values) => {
-    console.log("Received values of form:", values);
-    // Here, you can make an API call to add the new task
-    setIsModalVisible(false);
+  const onFinishAdd = (values) => {
+    setIsAddModalVisible(false);
+    const newProject = {
+      name: values.projectName,
+      description: values.description,
+    };
+    addProject(newProject);
     form.resetFields();
   };
+
+  const onFinishEdit = (values) => {
+    setIsEditModalVisible(false);
+    const editedProject = {
+      _id: form.getFieldValue("_id"), // Get the project ID from the form
+      name: values.projectName,
+      description: values.description,
+    };
+    editProject(editedProject._id, editedProject); // Pass the project ID
+    form.resetFields();
+  };
+
+  const onFinishEditTeamMembers = (values) => {
+    setIsEditTeamMembersModalVisible(false);
+    // Logic to edit team members goes here
+  };
+
+  const addMember = (projectId, member) => {
+    addMemberToProject(projectId, member);
+  };
+
+  const removeMember = (projectId, member) => {
+    removeMemberFromProject(projectId, member);
+  };
+
   const columns = [
     {
       title: "Name",
@@ -42,7 +96,23 @@ const ViewAllProject = () => {
       title: "Team Members",
       dataIndex: "teamMembers",
       key: "teamMembers",
-      render: (teamMembers) => teamMembers.join(", "),
+      render: (teamMembers, record) => (
+        <div>
+          {teamMembers?.map((member) => (
+            <Tag
+              closable
+              onClose={() => removeMember(record._id, member)}
+              key={member}
+            >
+              {member}
+            </Tag>
+          ))}
+          <Input
+            placeholder="Add a member"
+            onPressEnter={(e) => addMember(record._id, e.target.value)}
+          />
+        </div>
+      ),
     },
     {
       title: "Action",
@@ -60,6 +130,10 @@ const ViewAllProject = () => {
             type="default"
             icon={<EditOutlined />}
             className="hover:bg-gray-200"
+            onClick={() => {
+              showEditModal();
+              form.setFieldsValue(record); // Populate form fields with project data
+            }}
           >
             Edit
           </Button>
@@ -67,6 +141,7 @@ const ViewAllProject = () => {
             type="danger"
             icon={<DeleteOutlined />}
             className="bg-red-500 hover:bg-red-600 text-white"
+            onClick={() => deleteProject(record._id)}
           >
             Delete
           </Button>
@@ -80,33 +155,27 @@ const ViewAllProject = () => {
       <div className="">
         <Button
           type="primary"
-          onClick={showModal}
+          onClick={showAddModal}
           className="bg-blue-500 hover:bg-blue-600 text-white"
         >
-          Add Task
+          Add Project
         </Button>
       </div>
-      {loading ? (
-        <div className="flex justify-center">
-          <Spin size="large" />
-        </div>
-      ) : (
-        <Table
-          dataSource={project}
-          columns={columns}
-          rowKey="_id"
-          bordered
-          className="ant-table-bordered"
-        />
-      )}
-
+      <Table
+        dataSource={projects}
+        columns={columns}
+        rowKey="_id"
+        bordered
+        className="ant-table-bordered"
+      />
+      {/* Add Project Modal */}
       <Modal
-        title="Add Task"
-        visible={isModalVisible}
+        title="Add Project"
+        visible={isAddModalVisible}
         onCancel={handleCancel}
         footer={null}
       >
-        <Form form={form} layout="vertical" onFinish={onFinish}>
+        <Form form={form} layout="vertical" onFinish={onFinishAdd}>
           <Form.Item
             name="projectName"
             label="Project Name"
@@ -131,7 +200,50 @@ const ViewAllProject = () => {
               htmlType="submit"
               className="bg-blue-500 hover:bg-blue-600 text-white"
             >
-              Add Task
+              Add Project
+            </Button>
+          </Form.Item>
+        </Form>
+      </Modal>
+      {/* Edit Project Modal */}
+      <Modal
+        title="Edit Project"
+        visible={isEditModalVisible}
+        onCancel={handleCancel}
+        footer={null}
+      >
+        <Form form={form} layout="vertical" onFinish={onFinishEdit}>
+          <Form.Item
+            name="_id" // Hidden field to store project ID
+            hidden
+          >
+            <Input />
+          </Form.Item>
+          <Form.Item
+            name="projectName"
+            label="Project Name"
+            rules={[
+              { required: true, message: "Please input the project name!" },
+            ]}
+          >
+            <Input />
+          </Form.Item>
+          <Form.Item
+            name="description"
+            label="Description"
+            rules={[
+              { required: true, message: "Please input the description!" },
+            ]}
+          >
+            <Input.TextArea rows={4} />
+          </Form.Item>
+          <Form.Item>
+            <Button
+              type="primary"
+              htmlType="submit"
+              className="bg-blue-500 hover:bg-blue-600 text-white"
+            >
+              Save Changes
             </Button>
           </Form.Item>
         </Form>
