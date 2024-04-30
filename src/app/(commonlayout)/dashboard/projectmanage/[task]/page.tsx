@@ -36,11 +36,13 @@ const TaskPage = ({ params }) => {
 
   const projectTask = project(params.task);
   const [tasks, setTasks] = useState([]);
+  const [projectM, setProjectM] = useState([]);
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [editTask, setEditTask] = useState(null);
 
   useEffect(() => {
     setTasks(projectTask.tasks);
+    setProjectM(projectTask);
   }, [params]);
 
   const handleEditModalOpen = (task) => {
@@ -58,10 +60,11 @@ const TaskPage = ({ params }) => {
     setEditModalVisible(false);
   };
 
-  const handleAddTask = (name, description) => {
+  const handleAddTask = (name, description, deadline) => {
     const newTask = {
       _id: Math.random().toString(36).substr(2, 9), // Generate a random ID
       name: name,
+      deadline: deadline,
       description: description,
       status: "To Do",
     };
@@ -79,7 +82,7 @@ const TaskPage = ({ params }) => {
     e.currentTarget.classList.add("opacity-50");
   };
 
-  const handleDragOver = (e, p0: string) => {
+  const handleDragOver = (e: string) => {
     e.preventDefault();
     e.currentTarget.classList.add("bg-blue-100");
   };
@@ -119,7 +122,9 @@ const TaskPage = ({ params }) => {
             alignItems: "center",
             padding: "20px",
           }}
-          onFinish={({ name, description }) => handleAddTask(name, description)}
+          onFinish={({ name, description, deadline }) =>
+            handleAddTask(name, description, deadline)
+          }
           layout="inline"
         >
           <Form.Item
@@ -134,6 +139,12 @@ const TaskPage = ({ params }) => {
           >
             <Input placeholder="Task Description" />
           </Form.Item>
+          <Form.Item
+            name="deadline"
+            rules={[{ required: true, message: "Please enter a deadline" }]}
+          >
+            <Input type="date" />
+          </Form.Item>
           <Form.Item>
             <Button type="primary" htmlType="submit">
               Add Task
@@ -141,6 +152,33 @@ const TaskPage = ({ params }) => {
           </Form.Item>
         </Form>
       </div>
+      <div>
+        <Title level={2} style={{ marginBottom: "10px", textAlign: "center" }}>
+          {projectM.name}
+        </Title>
+        <Text
+          style={{
+            textAlign: "center",
+            width: "50%",
+            color: "rgba(0, 0, 0, 0.65)",
+          }}
+        >
+          {projectM.description}
+        </Text>
+      </div>
+      <Divider />
+      <Text
+        style={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+
+          fontSize: "2.2rem",
+          fontWeight: "bold",
+        }}
+      >
+        All Tasks for this Project
+      </Text>
       <Text
         style={{
           display: "flex",

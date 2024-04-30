@@ -74,7 +74,10 @@ export const useProjectStore = create((set) => ({
     set((state: { projects: Array<TProject> }) => ({
       projects: state.projects.map((project) =>
         project._id === projectId
-          ? { ...project, tasks: [...(project.tasks || []), task] }
+          ? {
+              ...project,
+              tasks: [...(project.tasks || []), task],
+            }
           : project
       ),
     })),
