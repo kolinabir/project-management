@@ -10,7 +10,7 @@ const createProjectIntoDB = async (payload: TProject) => {
 const getAllProjectsFromDB = async () => {
   const projects = await Project.find().populate(
     'tasks',
-    'name description status team recentActivities assignedMembers',
+    'name description status team recentActivities assignedMembers deadline',
   )
   return projects
 }
@@ -28,7 +28,7 @@ const getProjectFromDB = async (id: string) => {
   //tasks is an array of task ids
   const project = await Project.findById(id).populate(
     'tasks',
-    'name description status team recentActivities assignedMembers',
+    'name description status team recentActivities assignedMembers deadline',
   )
   return project
 }

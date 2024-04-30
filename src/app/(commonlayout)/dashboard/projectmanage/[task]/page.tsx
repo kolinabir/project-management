@@ -58,11 +58,11 @@ const TaskPage = ({ params }) => {
     setEditModalVisible(false);
   };
 
-  const handleAddTask = () => {
+  const handleAddTask = (name, description) => {
     const newTask = {
       _id: Math.random().toString(36).substr(2, 9), // Generate a random ID
-      name: "New Task",
-      description: "Description of the new task",
+      name: name,
+      description: description,
       status: "To Do",
     };
     addTaskToProject(project._id, newTask);
@@ -74,11 +74,12 @@ const TaskPage = ({ params }) => {
     setTasks(tasks.filter((task) => task._id !== taskId));
   };
 
-  const handleDragStart = (e, index) => {
-    e.dataTransfer.setData("text/plain", index);
+  const handleDragStart = (e, taskId) => {
+    e.dataTransfer.setData("text/plain", taskId);
     e.currentTarget.classList.add("opacity-50");
   };
-  const handleDragOver = (e, status) => {
+
+  const handleDragOver = (e, p0: string) => {
     e.preventDefault();
     e.currentTarget.classList.add("bg-blue-100");
   };
@@ -94,17 +95,63 @@ const TaskPage = ({ params }) => {
   const handleDrop = (e, status) => {
     e.preventDefault();
     e.currentTarget.classList.remove("bg-blue-100");
-    const draggedIndex = e.dataTransfer.getData("text/plain");
-    const updatedTasks = [...tasks];
-    const [draggedTask] = updatedTasks.splice(draggedIndex, 1);
-    changeTaskStatus(projectTask._id, draggedTask._id, status);
-    draggedTask.status = status;
-    updatedTasks.push(draggedTask);
-    setTasks(updatedTasks);
+    const taskId = e.dataTransfer.getData("text/plain");
+    const task = tasks.find((task) => task._id === taskId);
+    if (task) {
+      changeTaskStatus(projectTask._id, task._id, status);
+      const updatedTasks = tasks.map((t) => {
+        if (t._id === taskId) {
+          return { ...t, status };
+        }
+        return t;
+      });
+      setTasks(updatedTasks);
+    }
   };
 
   return (
     <>
+      <div className="py-5 mt-5 ">
+        <Form
+          style={{
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            padding: "20px",
+          }}
+          onFinish={({ name, description }) => handleAddTask(name, description)}
+          layout="inline"
+        >
+          <Form.Item
+            name="name"
+            rules={[{ required: true, message: "Please enter a name" }]}
+          >
+            <Input placeholder="Task Name" />
+          </Form.Item>
+          <Form.Item
+            name="description"
+            rules={[{ required: true, message: "Please enter a description" }]}
+          >
+            <Input placeholder="Task Description" />
+          </Form.Item>
+          <Form.Item>
+            <Button type="primary" htmlType="submit">
+              Add Task
+            </Button>
+          </Form.Item>
+        </Form>
+      </div>
+      <Text
+        style={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          padding: "20px",
+          fontSize: "1.2rem",
+        }}
+      >
+        Drag and drop tasks to change their status
+      </Text>
       <Row gutter={[16, 16]} justify="center" className="mt-8">
         {/* To Do Column */}
         <Col xs={24} sm={8}>
@@ -127,11 +174,45 @@ const TaskPage = ({ params }) => {
                   key={task._id}
                   className="task-item"
                   draggable
-                  onDragStart={(e) => handleDragStart(e, index)}
+                  style={{
+                    backgroundColor: "dodgerblue",
+                    padding: "10px",
+                    color: "white",
+                    borderRadius: "5px",
+                    marginBottom: "10px",
+                  }}
+                  onDragStart={(e) => handleDragStart(e, task._id)}
                   onDragEnd={handleDragEnd}
                 >
-                  <Title level={5}>{task.name}</Title>
-                  <Text>{task.description}</Text>
+                  <div>
+                    <Text>
+                      {new Date(task.deadline).toLocaleDateString("en-US", {
+                        year: "numeric",
+                        month: "long",
+                        day: "numeric",
+                      })}
+                    </Text>
+                    <Title level={5}>{task.name}</Title>
+                    <Text>{task.description}</Text>
+                  </div>
+                  <div
+                    style={{
+                      display: "flex",
+                      gap: "10px",
+                    }}
+                  >
+                    <Button
+                      onClick={() => handleEditModalOpen(task)}
+                      icon={<FaEdit />}
+                      size="small"
+                      className="mr-2"
+                    />
+                    <Button
+                      onClick={() => handleRemoveTask(task._id)}
+                      icon={<FaTrash />}
+                      size="small"
+                    />
+                  </div>
                   <Divider />
                 </div>
               ))}
@@ -142,10 +223,10 @@ const TaskPage = ({ params }) => {
           <Card
             className="drop-zone"
             title={
-              <div className="flex items-center">
-                <FaSpinner className="text-yellow-500 mr-2" />
-                <h3 className="text-lg font-semibold">In Progress</h3>
-              </div>
+              <Title level={3}>
+                <FaClipboardList className="text-gray-500 mr-2" />
+                In Progress
+              </Title>
             }
             onDragOver={(e) => handleDragOver(e, "In Progress")}
             onDragLeave={handleDragLeave}
@@ -158,11 +239,45 @@ const TaskPage = ({ params }) => {
                   key={task._id}
                   className="task-item"
                   draggable
-                  onDragStart={(e) => handleDragStart(e, index)}
+                  style={{
+                    backgroundColor: "yellowgreen",
+                    padding: "10px",
+                    color: "white",
+                    borderRadius: "5px",
+                    marginBottom: "10px",
+                  }}
+                  onDragStart={(e) => handleDragStart(e, task._id)}
                   onDragEnd={handleDragEnd}
                 >
-                  <Title level={5}>{task.name}</Title>
-                  <Text>{task.description}</Text>
+                  <div>
+                    <Text>
+                      {new Date(task.deadline).toLocaleDateString("en-US", {
+                        year: "numeric",
+                        month: "long",
+                        day: "numeric",
+                      })}
+                    </Text>
+                    <Title level={5}>{task.name}</Title>
+                    <Text>{task.description}</Text>
+                  </div>
+                  <div
+                    style={{
+                      display: "flex",
+                      gap: "10px",
+                    }}
+                  >
+                    <Button
+                      onClick={() => handleEditModalOpen(task)}
+                      icon={<FaEdit />}
+                      size="small"
+                      className="mr-2"
+                    />
+                    <Button
+                      onClick={() => handleRemoveTask(task._id)}
+                      icon={<FaTrash />}
+                      size="small"
+                    />
+                  </div>
                   <Divider />
                 </div>
               ))}
@@ -173,10 +288,10 @@ const TaskPage = ({ params }) => {
           <Card
             className="drop-zone"
             title={
-              <div className="flex items-center ">
-                <FaCheckCircle className="text-green-500 mr-2" />
-                <h3 className="text-lg font-semibold">Done</h3>
-              </div>
+              <Title level={3}>
+                <FaClipboardList className="text-gray-500 mr-2" />
+                Done
+              </Title>
             }
             onDragOver={(e) => handleDragOver(e, "Done")}
             onDragLeave={handleDragLeave}
@@ -189,11 +304,45 @@ const TaskPage = ({ params }) => {
                   key={task._id}
                   className="task-item"
                   draggable
-                  onDragStart={(e) => handleDragStart(e, index)}
+                  onDragStart={(e) => handleDragStart(e, task._id)}
                   onDragEnd={handleDragEnd}
+                  style={{
+                    backgroundColor: "tomato",
+                    padding: "10px",
+                    color: "white",
+                    borderRadius: "5px",
+                    marginBottom: "10px",
+                  }}
                 >
-                  <Title level={5}>{task.name}</Title>
-                  <Text>{task.description}</Text>
+                  <div className="">
+                    <Text>
+                      {new Date(task.deadline).toLocaleDateString("en-US", {
+                        year: "numeric",
+                        month: "long",
+                        day: "numeric",
+                      })}
+                    </Text>
+                    <Title level={5}>{task.name}</Title>
+                    <Text>{task.description}</Text>
+                  </div>
+                  <div
+                    style={{
+                      display: "flex",
+                      gap: "10px",
+                    }}
+                  >
+                    <Button
+                      onClick={() => handleEditModalOpen(task)}
+                      icon={<FaEdit />}
+                      size="small"
+                      className="mr-2"
+                    />
+                    <Button
+                      onClick={() => handleRemoveTask(task._id)}
+                      icon={<FaTrash />}
+                      size="small"
+                    />
+                  </div>
                   <Divider />
                 </div>
               ))}
@@ -231,25 +380,7 @@ const TaskPage = ({ params }) => {
           </Form.Item>
         </Form>
       </Modal>
-      {/* Add Task Button */}
-      <Button type="primary" onClick={handleAddTask} className="mb-2 mr-2">
-        Add Task
-      </Button>
-      {/* Edit Task Button */}
-      <Button
-        onClick={() => handleEditModalOpen(editTask)}
-        className="mb-2 mr-2"
-      >
-        Edit Task
-      </Button>
-      {/* Remove Task Button */}
-      <Button
-        type="danger"
-        onClick={() => handleRemoveTask(editTask?._id)}
-        className="mb-2"
-      >
-        Remove Task
-      </Button>
+      {/* Add Task Input */}
     </>
   );
 };
