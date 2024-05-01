@@ -37,11 +37,7 @@ const SidebarLayout = ({ collapsed, toggleCollapsed }) => {
             DashBoard
           </Link>
         </Menu.Item>
-        <Menu.Item key="2" icon={<ProjectOutlined className="text-blue-500" />}>
-          <Link href="/dashboard/taskmanage" className="hover:text-blue-500">
-            Task Manage
-          </Link>
-        </Menu.Item>
+
         <Menu.Item key="3" icon={<TagsOutlined className="text-blue-500" />}>
           <Link href="/dashboard/projectmanage" className="hover:text-blue-500">
             Project Manage

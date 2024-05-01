@@ -129,6 +129,27 @@ export const useProjectStore = create((set) => ({
           : project
       ),
     })),
+  assignTaskToMember: (projectId: string, taskId: string, member: string) =>
+    set((state: { projects: Array<TProject> }) => ({
+      projects: state.projects.map((project) =>
+        project._id === projectId
+          ? {
+              ...project,
+              tasks: (project.tasks || []).map((task) =>
+                task._id === taskId
+                  ? {
+                      ...task,
+                      assignedMembers: [
+                        ...(task.assignedMembers || []),
+                        member,
+                      ],
+                    }
+                  : task
+              ),
+            }
+          : project
+      ),
+    })),
 }));
 
 // Initialize the store with projects fetched from the API

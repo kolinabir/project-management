@@ -7,7 +7,7 @@ import React, { useState } from "react";
 
 const { Content } = Layout;
 
-const DashboardLayout = ({ children }) => {
+const DashboardLayout = ({ children }: any) => {
   const [collapsed, setCollapsed] = useState(true);
 
   const toggleCollapsed = () => {

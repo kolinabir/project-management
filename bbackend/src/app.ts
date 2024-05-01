@@ -1,6 +1,5 @@
 import express, { Application, Request, Response } from 'express'
 import cors from 'cors'
-import globalErrorHandler from './middlewares/globalErrorHandler'
 import router from './routes'
 // import globalErrorHandler from './app/middlewares/globalErrorHandler'
 // import router from './app/routes'
@@ -14,7 +13,5 @@ app.use('/', router)
 app.get('/', (req: Request, res: Response) => {
   res.send('Hello World!')
 })
-
-app.use(globalErrorHandler)
 
 export default app

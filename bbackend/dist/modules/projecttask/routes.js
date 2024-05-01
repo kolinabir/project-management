@@ -1,0 +1,18 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.projectRoutes = void 0;
+const express_1 = require("express");
+const controller_1 = require("./controller");
+const router = (0, express_1.Router)();
+router.get('/:id', controller_1.projectController.getProject);
+router.get('/', controller_1.projectController.getAllProjects);
+router.get('/task/search', controller_1.projectController.searchTask);
+router.put('/:id', controller_1.projectController.editProject);
+router.put('/task/:id', controller_1.projectController.editTaskInProject);
+router.delete('/task/:id', controller_1.projectController.deleteTaskFromProject);
+router.post('/:id/task', controller_1.projectController.addTaskToProject);
+router.put('/task/:id/assign', controller_1.projectController.assignedMembersToTask);
+router.put('/task/:id/unassign', controller_1.projectController.deleteAssignedMembersFromTask);
+router.post('/:id/addteam', controller_1.projectController.addTeamMembers);
+router.post('/', controller_1.projectController.createProject);
+exports.projectRoutes = router;

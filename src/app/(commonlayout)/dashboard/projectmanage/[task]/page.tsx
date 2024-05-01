@@ -1,4 +1,9 @@
 "use client";
+/* eslint-disable react-hooks/exhaustive-deps */
+/* eslint-disable no-unused-vars */
+/* eslint-disable react-hooks/rules-of-hooks */
+/*tslint:disable*/
+// @ts-nocheck
 import React, { useEffect, useState } from "react";
 import {
   Row,
@@ -10,6 +15,7 @@ import {
   Form,
   Input,
   Button,
+  Select,
 } from "antd";
 import {
   FaClipboardList,
@@ -18,14 +24,17 @@ import {
   FaEdit,
   FaTrash,
 } from "react-icons/fa";
+import SearchBar from "@/components/Search/SearchBar";
 import { useProjectStore } from "@/lib/store";
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
+const { Option } = Select;
 
 const TaskPage = ({ params }) => {
   const project = useProjectStore((state) => state.getProjectById);
   const changeTaskStatus = useProjectStore((state) => state.changeTaskStatus);
+  const [filteredTasks, setFilteredTasks] = useState([]);
   const addTaskToProject = useProjectStore((state) => state.addTaskToProject);
   const removeTaskFromProject = useProjectStore(
     (state) => state.removeTaskFromProject
@@ -33,15 +42,53 @@ const TaskPage = ({ params }) => {
   const editTaskFromProject = useProjectStore(
     (state) => state.editTaskFromProject
   );
+  const assignTaskToMember = useProjectStore(
+    (state) => state.assignTaskToMember
+  );
+  const removeMemberFromTask = useProjectStore(
+    (state) => state.removeMemberFromTask
+  );
 
+  const handleSearch = (searchTerm, filterBy) => {
+    let filtered = tasks;
+
+    if (searchTerm) {
+      if (filterBy === "status") {
+        filtered = filtered.filter((task) =>
+          task.status.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+      } else if (filterBy === "dueDate") {
+        filtered = filtered.filter((task) => {
+          const dueDate = new Date(task.deadline);
+          if (isNaN(dueDate.getTime())) {
+            // Skip filtering for tasks with invalid deadline
+            return true;
+          }
+          return dueDate
+            .toLocaleDateString()
+            .toLowerCase()
+            .includes(searchTerm.toLowerCase());
+        });
+      } else if (filterBy === "assignee") {
+        filtered = filtered.filter((task) =>
+          (task.assignedMembers || []).some((member) =>
+            member.toLowerCase().includes(searchTerm.toLowerCase())
+          )
+        );
+      }
+    }
+
+    setFilteredTasks(filtered);
+  };
   const projectTask = project(params.task);
   const [tasks, setTasks] = useState([]);
   const [projectM, setProjectM] = useState([]);
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [editTask, setEditTask] = useState(null);
-
+  const [selectedMember, setSelectedMember] = useState("");
   useEffect(() => {
-    setTasks(projectTask.tasks);
+    setFilteredTasks(projectTask?.tasks);
+    setTasks(projectTask?.tasks);
     setProjectM(projectTask);
   }, [params]);
 
@@ -55,8 +102,10 @@ const TaskPage = ({ params }) => {
   };
 
   const handleEditTask = (values) => {
-    const updatedTask = { ...editTask, ...values };
-    editTaskFromProject(project._id, editTask._id, updatedTask);
+    const updatedTask = { ...(editTask || {}), ...values };
+    if (editTask) {
+      editTaskFromProject(project._id, editTask._id, updatedTask);
+    }
     setEditModalVisible(false);
   };
 
@@ -67,14 +116,52 @@ const TaskPage = ({ params }) => {
       deadline: deadline,
       description: description,
       status: "To Do",
+      assignedMembers: [], // Initialize an empty array for assigned members
     };
     addTaskToProject(project._id, newTask);
-    setTasks([...tasks, newTask]);
+    setFilteredTasks([...tasks, newTask]);
   };
 
   const handleRemoveTask = (taskId) => {
     removeTaskFromProject(project._id, taskId);
-    setTasks(tasks.filter((task) => task._id !== taskId));
+    setFilteredTasks(filteredTasks.filter((task) => task._id !== taskId));
+  };
+
+  const handleAssignMember = (taskId) => {
+    const task = filteredTasks.find((task) => task._id === taskId);
+
+    if (task && !task.assignedMembers.includes(selectedMember)) {
+      assignTaskToMember(project._id, taskId, selectedMember);
+
+      const updatedTasks = filteredTasks.map((t) => {
+        if (t._id === taskId) {
+          const newAssignedMembers = [
+            ...(t.assignedMembers || []),
+            selectedMember,
+          ];
+          return { ...t, assignedMembers: newAssignedMembers };
+        }
+        return t;
+      });
+
+      setFilteredTasks(updatedTasks);
+    } else {
+      console.log("Member already assigned to this task.");
+    }
+  };
+
+  const handleRemoveMember = (taskId, member) => {
+    const updatedTasks = filteredTasks.map((task) =>
+      task._id === taskId
+        ? {
+            ...task,
+            assignedMembers: (task.assignedMembers || []).filter(
+              (assignedMember) => assignedMember !== member
+            ),
+          }
+        : task
+    );
+    setFilteredTasks(updatedTasks);
   };
 
   const handleDragStart = (e, taskId) => {
@@ -82,7 +169,7 @@ const TaskPage = ({ params }) => {
     e.currentTarget.classList.add("opacity-50");
   };
 
-  const handleDragOver = (e: string) => {
+  const handleDragOver = (e) => {
     e.preventDefault();
     e.currentTarget.classList.add("bg-blue-100");
   };
@@ -99,21 +186,27 @@ const TaskPage = ({ params }) => {
     e.preventDefault();
     e.currentTarget.classList.remove("bg-blue-100");
     const taskId = e.dataTransfer.getData("text/plain");
-    const task = tasks.find((task) => task._id === taskId);
+    const task = filteredTasks.find((task) => task._id === taskId);
     if (task) {
       changeTaskStatus(projectTask._id, task._id, status);
-      const updatedTasks = tasks.map((t) => {
+      const updatedTasks = filteredTasks.map((t) => {
         if (t._id === taskId) {
           return { ...t, status };
         }
         return t;
       });
-      setTasks(updatedTasks);
+      setFilteredTasks(updatedTasks);
     }
   };
 
   return (
     <>
+      {" "}
+      <SearchBar
+        tasks={filteredTasks}
+        projectM={projectM}
+        onSearch={handleSearch}
+      />
       <div className="py-5 mt-5 ">
         <Form
           style={{
@@ -154,17 +247,11 @@ const TaskPage = ({ params }) => {
       </div>
       <div>
         <Title level={2} style={{ marginBottom: "10px", textAlign: "center" }}>
-          {projectM.name}
+          {projectM?.name || <FaSpinner className="animate-spin" />}
         </Title>
-        <Text
-          style={{
-            textAlign: "center",
-            width: "50%",
-            color: "rgba(0, 0, 0, 0.65)",
-          }}
-        >
-          {projectM.description}
-        </Text>
+        <Title level={4} style={{ marginBottom: "10px", textAlign: "center" }}>
+          {projectM?.description || <FaSpinner className="animate-spin" />}
+        </Title>
       </div>
       <Divider />
       <Text
@@ -205,15 +292,15 @@ const TaskPage = ({ params }) => {
             onDragLeave={handleDragLeave}
             onDrop={(e) => handleDrop(e, "To Do")}
           >
-            {tasks
-              .filter((task) => task.status === "To Do")
+            {filteredTasks
+              ?.filter((task) => task.status === "To Do")
               .map((task, index) => (
                 <div
                   key={task._id}
                   className="task-item"
                   draggable
                   style={{
-                    backgroundColor: "dodgerblue",
+                    backgroundColor: "tomato",
                     padding: "10px",
                     color: "white",
                     borderRadius: "5px",
@@ -224,6 +311,7 @@ const TaskPage = ({ params }) => {
                 >
                   <div>
                     <Text>
+                      <Text>Deadline: </Text>
                       {new Date(task.deadline).toLocaleDateString("en-US", {
                         year: "numeric",
                         month: "long",
@@ -236,22 +324,79 @@ const TaskPage = ({ params }) => {
                   <div
                     style={{
                       display: "flex",
-                      gap: "10px",
+                      flexDirection: "column",
+                      gap: "5px",
                     }}
                   >
-                    <Button
-                      onClick={() => handleEditModalOpen(task)}
-                      icon={<FaEdit />}
-                      size="small"
-                      className="mr-2"
-                    />
-                    <Button
-                      onClick={() => handleRemoveTask(task._id)}
-                      icon={<FaTrash />}
-                      size="small"
-                    />
+                    <div
+                      style={{
+                        display: "flex",
+                        gap: "10px",
+                        alignItems: "center",
+                        marginTop: "5px",
+                      }}
+                    >
+                      <strong>Assigned Members: </strong>
+                      {task.assignedMembers &&
+                      task.assignedMembers.length > 0 ? (
+                        task.assignedMembers.map((member) => (
+                          <div
+                            key={member}
+                            style={{ display: "flex", alignItems: "center" }}
+                          >
+                            <span>{member}</span>
+                            <Button
+                              onClick={() =>
+                                handleRemoveMember(task._id, member)
+                              }
+                              icon={<FaTrash />}
+                              size="small"
+                              style={{ marginLeft: "5px" }}
+                            />
+                          </div>
+                        ))
+                      ) : (
+                        <span>No assigned members</span>
+                      )}
+                    </div>
+                    <div
+                      style={{
+                        display: "flex",
+                        gap: "10px",
+                        marginTop: "5px",
+                      }}
+                    >
+                      <Button
+                        onClick={() => handleEditModalOpen(task)}
+                        icon={<FaEdit />}
+                        size="small"
+                        className="mr-2"
+                      />
+                      <Button
+                        onClick={() => handleRemoveTask(task._id)}
+                        icon={<FaTrash />}
+                        size="small"
+                      />
+                    </div>
                   </div>
                   <Divider />
+                  <Select
+                    defaultValue=""
+                    onChange={(value) => setSelectedMember(value)}
+                    style={{ width: 200 }}
+                  >
+                    {projectM.teamMembers.map((member) => (
+                      <Option key={member} value={member}>
+                        {member}
+                      </Option>
+                    ))}
+                  </Select>
+                  <Button
+                    onClick={() => handleAssignMember(task._id)}
+                    type="primary"
+                  >
+                    Assign Member
+                  </Button>
                 </div>
               ))}
           </Card>
@@ -270,15 +415,15 @@ const TaskPage = ({ params }) => {
             onDragLeave={handleDragLeave}
             onDrop={(e) => handleDrop(e, "In Progress")}
           >
-            {tasks
-              .filter((task) => task.status === "In Progress")
+            {filteredTasks
+              ?.filter((task) => task.status === "In Progress")
               .map((task, index) => (
                 <div
                   key={task._id}
                   className="task-item"
                   draggable
                   style={{
-                    backgroundColor: "yellowgreen",
+                    backgroundColor: "dodgerblue",
                     padding: "10px",
                     color: "white",
                     borderRadius: "5px",
@@ -289,34 +434,92 @@ const TaskPage = ({ params }) => {
                 >
                   <div>
                     <Text>
-                      {new Date(task.deadline).toLocaleDateString("en-US", {
+                      <Text>DeadLine: </Text>
+                      {new Date(task?.deadline).toLocaleDateString("en-US", {
                         year: "numeric",
                         month: "long",
                         day: "numeric",
                       })}
                     </Text>
-                    <Title level={5}>{task.name}</Title>
-                    <Text>{task.description}</Text>
+                    <Title level={5}>{task?.name}</Title>
+                    <Text>{task?.description}</Text>
                   </div>
                   <div
                     style={{
                       display: "flex",
-                      gap: "10px",
+                      flexDirection: "column",
+                      gap: "5px",
                     }}
                   >
-                    <Button
-                      onClick={() => handleEditModalOpen(task)}
-                      icon={<FaEdit />}
-                      size="small"
-                      className="mr-2"
-                    />
-                    <Button
-                      onClick={() => handleRemoveTask(task._id)}
-                      icon={<FaTrash />}
-                      size="small"
-                    />
+                    <div
+                      style={{
+                        display: "flex",
+                        gap: "10px",
+                        alignItems: "center",
+                        marginTop: "5px",
+                      }}
+                    >
+                      <strong>Assigned Members: </strong>
+                      {task?.assignedMembers &&
+                      task?.assignedMembers.length > 0 ? (
+                        task?.assignedMembers.map((member) => (
+                          <div
+                            key={member}
+                            style={{ display: "flex", alignItems: "center" }}
+                          >
+                            <span>{member}</span>
+                            <Button
+                              onClick={() =>
+                                handleRemoveMember(task?._id, member)
+                              }
+                              icon={<FaTrash />}
+                              size="small"
+                              style={{ marginLeft: "5px" }}
+                            />
+                          </div>
+                        ))
+                      ) : (
+                        <span>No assigned members</span>
+                      )}
+                    </div>
+                    <div
+                      style={{
+                        display: "flex",
+                        gap: "10px",
+                        marginTop: "5px",
+                      }}
+                    >
+                      <Button
+                        onClick={() => handleEditModalOpen(task)}
+                        icon={<FaEdit />}
+                        size="small"
+                        className="mr-2"
+                      />
+                      <Button
+                        onClick={() => handleRemoveTask(task._id)}
+                        icon={<FaTrash />}
+                        size="small"
+                      />
+                    </div>
                   </div>
                   <Divider />
+                  <Select
+                    defaultValue=""
+                    onChange={(value) => setSelectedMember(value)}
+                    style={{ width: 200 }}
+                  >
+                    {projectM.teamMembers.map((member) => (
+                      <Option key={member} value={member}>
+                        {member}
+                      </Option>
+                    ))}
+                  </Select>
+                  <Button
+                    onClick={() => handleAssignMember(task._id)}
+                    type="primary"
+                  >
+                    Assign Member
+                  </Button>
                 </div>
               ))}
           </Card>
@@ -335,25 +538,26 @@ const TaskPage = ({ params }) => {
             onDragLeave={handleDragLeave}
             onDrop={(e) => handleDrop(e, "Done")}
           >
-            {tasks
-              .filter((task) => task.status === "Done")
+            {filteredTasks
+              ?.filter((task) => task.status === "Done")
               .map((task, index) => (
                 <div
                   key={task._id}
                   className="task-item"
                   draggable
-                  onDragStart={(e) => handleDragStart(e, task._id)}
-                  onDragEnd={handleDragEnd}
                   style={{
-                    backgroundColor: "tomato",
+                    backgroundColor: "yellowgreen",
                     padding: "10px",
                     color: "white",
                     borderRadius: "5px",
                     marginBottom: "10px",
                   }}
+                  onDragStart={(e) => handleDragStart(e, task._id)}
+                  onDragEnd={handleDragEnd}
                 >
-                  <div className="">
+                  <div>
                     <Text>
+                      <Text>DeadLine: </Text>
                       {new Date(task.deadline).toLocaleDateString("en-US", {
                         year: "numeric",
                         month: "long",
@@ -366,28 +570,84 @@ const TaskPage = ({ params }) => {
                   <div
                     style={{
                       display: "flex",
-                      gap: "10px",
+                      flexDirection: "column",
+                      gap: "5px",
                     }}
                   >
-                    <Button
-                      onClick={() => handleEditModalOpen(task)}
-                      icon={<FaEdit />}
-                      size="small"
-                      className="mr-2"
-                    />
-                    <Button
-                      onClick={() => handleRemoveTask(task._id)}
-                      icon={<FaTrash />}
-                      size="small"
-                    />
+                    <div
+                      style={{
+                        display: "flex",
+                        gap: "10px",
+                        alignItems: "center",
+                        marginTop: "5px",
+                      }}
+                    >
+                      <strong>Assigned Members: </strong>
+                      {task.assignedMembers &&
+                      task.assignedMembers.length > 0 ? (
+                        task.assignedMembers.map((member) => (
+                          <div
+                            key={member}
+                            style={{ display: "flex", alignItems: "center" }}
+                          >
+                            <span>{member}</span>
+                            <Button
+                              onClick={() =>
+                                handleRemoveMember(task._id, member)
+                              }
+                              icon={<FaTrash />}
+                              size="small"
+                              style={{ marginLeft: "5px" }}
+                            />
+                          </div>
+                        ))
+                      ) : (
+                        <span>No assigned members</span>
+                      )}
+                    </div>
+                    <div
+                      style={{
+                        display: "flex",
+                        gap: "10px",
+                        marginTop: "5px",
+                      }}
+                    >
+                      <Button
+                        onClick={() => handleEditModalOpen(task)}
+                        icon={<FaEdit />}
+                        size="small"
+                        className="mr-2"
+                      />
+                      <Button
+                        onClick={() => handleRemoveTask(task._id)}
+                        icon={<FaTrash />}
+                        size="small"
+                      />
+                    </div>
                   </div>
                   <Divider />
+                  <Select
+                    defaultValue=""
+                    onChange={(value) => setSelectedMember(value)}
+                    style={{ width: 200 }}
+                  >
+                    {projectM.teamMembers.map((member) => (
+                      <Option key={member} value={member}>
+                        {member}
+                      </Option>
+                    ))}
+                  </Select>
+                  <Button
+                    onClick={() => handleAssignMember(task._id)}
+                    type="primary"
+                  >
+                    Assign Member
+                  </Button>
                 </div>
               ))}
           </Card>
         </Col>
       </Row>
-      {/* Edit Task Modal */}
       <Modal
         title="Edit Task"
         visible={editModalVisible}
@@ -418,7 +678,6 @@ const TaskPage = ({ params }) => {
           </Form.Item>
         </Form>
       </Modal>
-      {/* Add Task Input */}
     </>
   );
 };
