@@ -106,7 +106,15 @@ const TaskPage = ({ params }) => {
     if (editTask) {
       editTaskFromProject(project._id, editTask._id, updatedTask);
     }
+    const updatedTasks = filteredTasks.map((task) =>
+      task._id === editTask._id ? updatedTask : task
+    );
+    setFilteredTasks(updatedTasks);
     setEditModalVisible(false);
+    //empty the edit task
+    values.description = "";
+    values.name = "";
+    setEditTask(null);
   };
 
   const handleAddTask = (name, description, deadline) => {
